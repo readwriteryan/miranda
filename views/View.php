@@ -1,10 +1,6 @@
 <?php
 namespace miranda\views;
 
-/** Instance Specific Definitions */
-define('GLOBAL_TEMPLATE', WEB_ROOT . 'views/global/template.html.php');
-define('GLOBAL_FOOTER', WEB_ROOT . 'views/global/footer.html.php');
-
 class View
 {
 

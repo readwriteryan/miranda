@@ -2,8 +2,6 @@
 namespace miranda\cache\drivers;
 use miranda\cache\CacheInterface;
 
-define('REDIS_SERVER', '127.0.0.1');
-define('REDIS_PORT', '6379');
 
 class RedisDriver implements CacheInterface
 {

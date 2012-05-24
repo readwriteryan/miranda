@@ -2,11 +2,6 @@
 namespace miranda\controllers;
 use miranda\cache\CacheFactory;
 
-define('GET_REQUEST', 1);
-define('POST_REQUEST', 2);
-define('PUT_REQUEST', 3);
-define('DELETE_REQUEST', 4);
-
 Class Request
 {
     protected static $instance = NULL;

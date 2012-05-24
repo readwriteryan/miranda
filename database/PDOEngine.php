@@ -6,15 +6,6 @@ use PDOStatement;
 use PDOException;
 use miranda\logging\SystemLogger;
 
-/**Instance-specific definitions */
-define('DEFAULT_DSN', 'mysql:dbname=avergrid;host=localhost');	/** Defines the default DSN associated with the engine */
-define('DEFAULT_USERNAME', 'testuser');							/** Defines the default username associated with the engine */
-define('DEFAULT_PASSWORD', 'testpassword');						/** Defines the default password associated with the engine */
-define('LOG_ALL_QUERIES', 1);									/** 1 to log all queries executed, 0 to turn logging off */
-define('LOG_QUERY_ERRORS', 1); 									/** 1 to log database query errors, 0 to turn logging off */
-define('LOG_SLOW_QUERIES', 1); 									/** 1 to log slow database queries, 0 to turn logging off */
-define('SLOW_QUERY_TIME', 2.0);									/** Sets the minimum length in seconds for a query to be considered slow */
-
 Class PDOStmt extends PDOStatement
 {   
     public function execute($args = NULL)

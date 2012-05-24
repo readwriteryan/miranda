@@ -2,9 +2,6 @@
 namespace miranda\cache\drivers;
 use miranda\cache\CacheInterface;
 
-define('MEMCACHED_SERVER', 'localhost');
-define('MEMCACHED_PORT', '11211');
-
 class MemcacheDriver implements CacheInterface
 {
 	private $engine;

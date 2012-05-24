@@ -1,6 +1,5 @@
 <?php
 namespace miranda\cache;
-define('CACHE_DEFAULT', 'memcache');
 
 class CacheFactory
 {
