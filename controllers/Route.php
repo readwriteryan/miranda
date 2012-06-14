@@ -87,7 +87,7 @@ Class Route
 		
 		
 	if(isset($request -> mapping[$method]))	$method = $request -> mapping[$method];
-	else 						$method = $request -> mapping['default'];
+	else						$method = $request -> mapping['default'];
 		
 	self::$routes[$method][self::processRoute($route)] = $action;
     }
@@ -105,7 +105,7 @@ Class Route
     
     public static function start()
     {
-	$request 	= Request::getInstance();
+	$request	= Request::getInstance();
 	$params		= array();
 		
 	if($request -> path != false)
