@@ -10,35 +10,29 @@ Class Autoloader
     
     protected static function register()
     {
-		self::$registered = spl_autoload_register('\miranda\autoloader\Autoloader::autoload');
-		return self::$registered;
+	self::$registered = spl_autoload_register('\miranda\autoloader\Autoloader::autoload');
+	return self::$registered;
     }
     
     public static function registerNamespace($namespace, $location)
     {
-		self::$namespaces[$namespace] = $location;
+	self::$namespaces[$namespace] = $location;
 		
-		if(!self::$registered)
-		{
-			return self::register();
-		}
-		
-		return true;
+	return self::$registered ? true : self:: register();
     }
     
     public static function autoload($loadNamespace)
     {
-		$load		= ltrim($loadNamespace, '\\');
-		$namespace	= substr($load, 0, strpos($load, '\\'));
+	$load		= ltrim($loadNamespace, '\\');
+	$namespace	= substr($load, 0, strpos($load, '\\'));
 		
-		if(isset(self::$namespaces[$namespace]))
-		{
-			$class_name		= str_replace('\\', '/', substr($load, strpos($load, '\\') + 1)) . '.php';
-			$file_location	= self::$namespaces[$namespace] . '/' . $class_name;
+	if(isset(self::$namespaces[$namespace]))
+	{
+	    $class_name		= str_replace('\\', '/', substr($load, strpos($load, '\\') + 1)) . '.php';
+	    $file_location	= self::$namespaces[$namespace] . '/' . $class_name;
 			
-			if(!file_exists($file_location)) { echo $file_location; die; }
-			return require_once($file_location);
-		}
+	    return require_once($file_location);
+	}
     }
 }
 ?>

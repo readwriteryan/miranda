@@ -9,12 +9,12 @@ class CacheFactory
     
     public static function getInstance($cacheDriver)
     {
-		$driver = CACHE_NAMESPACE . 'drivers\\' . ucfirst($cacheDriver) . 'Driver';
+	$driver = CACHE_NAMESPACE . 'drivers\\' . ucfirst($cacheDriver) . 'Driver';
 		
-		if(!isset($instances[$cacheDriver]))
-			$instances[$cacheDriver] = new $driver;
+	if(!isset($instances[$cacheDriver]))
+	    $instances[$cacheDriver] = new $driver;
 			
-		return $instances[$cacheDriver];
+	return $instances[$cacheDriver];
     }
 }
 ?>
