@@ -87,7 +87,7 @@ Class Route
 		
 		
 	if(isset($request -> mapping[$method]))	$method = $request -> mapping[$method];
-	else						$method = $request -> mapping['default'];
+	else					$method = $request -> mapping['default'];
 		
 	self::$routes[$method][self::processRoute($route)] = $action;
     }
@@ -100,7 +100,7 @@ Class Route
     public static function root($action)
     {
 	self::$root				= $action;
-	self::$routes[GET_REQUEST]['/']	= $action;
+	self::$routes[GET_REQUEST]['/']		= $action;
     }
     
     public static function start()
