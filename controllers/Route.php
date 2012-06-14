@@ -38,7 +38,7 @@ Class Request
 	$method = strtolower($_SERVER['REQUEST_METHOD']);
 	
 	if(isset($_POST['http_method_override']))
-		$method = strtolower($_POST['http_method_override']);
+	    $method = strtolower($_POST['http_method_override']);
 		
 	if(isset($this -> mapping[$method]))	$this -> method = $this -> mapping[$method];
 	else					$this -> method = $this -> mapping['default'];
@@ -169,28 +169,28 @@ Class Route
     
     protected static function processRoute($route, $restrict)
     {
-		$original_route	= $route;
-		$cache		= CacheFactory::getInstance(CACHE_DEFAULT);
+	$original_route	= $route;
+	$cache		= CacheFactory::getInstance(CACHE_DEFAULT);
 		
-		/** Read route information from cache if possible */
-		if($cacheRoute = $cache -> get('route_rewrite_' . md5($route))) return $cacheRoute;
+	/** Read route information from cache if possible */
+	if($cacheRoute = $cache -> get('route_rewrite_' . md5($route))) return $cacheRoute;
 		   
-		$restrictions = array(	'int' 		=> '(?P<$1>[0-9]+)',
-					'float' 	=> '(?P<$1>[0-9\.]+)',
-					'alpha' 	=> '(?P<$1>[a-zA-Z]+)',
-					'alphanum'	=> '(?P<$1>[a-zA-Z0-9]+)');
+	$restrictions = array(	'int' 		=> '(?P<$1>[0-9]+)',
+				'float' 	=> '(?P<$1>[0-9\.]+)',
+				'alpha' 	=> '(?P<$1>[a-zA-Z]+)',
+				'alphanum'	=> '(?P<$1>[a-zA-Z0-9]+)');
 			  
-		$route = str_replace(')', ')?', str_replace('(', '(?:',$route));
+	$route = str_replace(')', ')?', str_replace('(', '(?:',$route));
 		
-		foreach($restrict as $variable => $restriction)
-		{
-		    $route = preg_replace("`:($variable)`", $restrictions[$restriction], $route);
-		}
+	foreach($restrict as $variable => $restriction)
+	{
+	    $route = preg_replace("`:($variable)`", $restrictions[$restriction], $route);
+	}
 		
-		$route = preg_replace('`:([a-zA-Z][a-zA-Z0-9]*)`', '(?P<$1>[^/]+)', $route);
-		$cache -> set('route_rewrite_' . md5($original_route), $route, 0);
+	$route = preg_replace('`:([a-zA-Z][a-zA-Z0-9]*)`', '(?P<$1>[^/]+)', $route);
+	$cache -> set('route_rewrite_' . md5($original_route), $route, 0);
 		
-		return $route;
+	return $route;
     }
 }
 ?>
