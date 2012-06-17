@@ -8,7 +8,10 @@ class View
     
     private static function escape($value)
     {
-	return htmlentities($value, ENT_QUOTES, SITE_CHARSET);
+	if(is_string($value))
+	    return htmlentities($value, ENT_QUOTES, SITE_CHARSET);
+	else
+	    return $value;
     }
     
     public function setVisible($set, $value = '')
@@ -21,13 +24,9 @@ class View
 		{
 		    $this -> visible[$key] = array_map('self::escape', $value);
 		}
-		else if(is_string($value))
-		{
-		    $this -> visible[$key] = self::escape($value);
-		}
 		else
 		{
-		    $this -> visible[$key] = $value;
+		    $this -> visible[$key] = self::escape($value);
 		}
 	    }
 	}

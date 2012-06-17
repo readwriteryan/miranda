@@ -3,6 +3,7 @@ namespace miranda\ORM;
 
 use miranda\database\PDOEngine;
 use miranda\cache\CacheFactory;
+use miranda\exceptions\GeneralException;
 use PDO;
 
 class BasicORM
@@ -10,6 +11,8 @@ class BasicORM
     protected static $table_name	= NULL;
     protected static $primary_key	= NULL;
     protected static $column_map	= array();
+    protected static $accessible	= true;
+    protected $persisted		= false;
     protected $values			= array();
     protected $updated			= false;
     protected $cacheable		= false;
@@ -20,21 +23,22 @@ class BasicORM
     
     public function __get($key)
     {
-	$class = get_called_class();
-	if(array_key_exists($key, $class::$column_map))
+	if(array_key_exists($key, static::$column_map))
 	{
-	    $key = $class::$column_map[$key];
+	    $key = static::$column_map[$key];
 	}
-		
-	return $this -> values[$key];
+	
+	if(!is_array(static::$accessible) || array_key_exists($key, static::$accessible))
+	    return $this -> values[$key];
+	else
+	    throw new GeneralException("Property: '$key' is inaccessible.");
     }
     
     public function __set($key, $value)
     {
-	$class = get_called_class();
-	if(array_key_exists($key, $class::$column_map))
+	if(array_key_exists($key, static::$column_map))
 	{
-	    $key = $class::$column_map[$key];
+	    $key = static::$column_map[$key];
 	}
 		
 	$this -> updated[]	= $key;
@@ -43,22 +47,32 @@ class BasicORM
     
     public function mapsTo($table_name)
     {
-	$class			= get_called_class();
-	$class::$table_name 	= $table_name;
+	static::$table_name = $table_name;
     }
     
     public function hasColumn($column_name, $column_map)
     {
-	$class 					= get_called_class();
-	$class::$column_map[$column_name] 	= $column_map;
+	static::$column_map[$column_name] = $column_map;
     }
     
     public function hasRelationship($relationship_alias, $relationship_class, $foreign_key)
     {
-	$class = get_called_class();
 	$this -> values[$relationship_alias] = new $relationship_class;
-	$this -> values[$relationship_alias] -> $foreign_key = isset($this -> values[$class::$column_map[$class::$primary_key]]) ? $this -> values[$class::$column_map[$class::$primary_key]] : 0;
+	$this -> values[$relationship_alias] -> $foreign_key = isset($this -> values[static::$column_map[static::$primary_key]]) ? $this -> values[static::$column_map[static::$primary_key]] : 0;
 	$this -> values[$relationship_alias] -> setForeignKey($foreign_key);
+    }
+    
+    public function accessible($key)
+    {
+	if(is_array(static::$accessible))
+	{
+	    static::$accessible[$key] = true;
+	}
+	else
+	{
+	    static::$accessible = array();
+	    static::$accessible[$key] = true;
+	}
     }
     
     public function setForeignKey($foreign_key)
@@ -92,27 +106,39 @@ class BasicORM
 	return $new;
     }
     
-    protected function update()
+    protected function update($force = false)
     {
 	$class	= get_called_class();
 	$db	= PDOEngine::getInstance();
 	$query	= 'UPDATE `' . $class::$table_name .'` SET ';
 	$values	= array();
 		
-	if(!is_array($this -> updated))
+	if(!is_array($this -> updated) && !$force)
 	{
-	    return false;   
+	    return false;
 	}
-		
-	foreach($this -> updated as $key)
+	else if(is_array($this -> updated))
 	{
-	    $query	= $query . $class::$column_map[$key] . ' = ?, ';
-	    $values[]	= $this -> values[$class::$column_map[$key]];
+	    foreach($this -> updated as $key)
+	    {
+		$query	= $query . $class::$column_map[$key] . ' = ?, ';
+		$values[]	= is_array($this -> values[$class::$column_map[$key]]) ? serialize($this -> values[$class::$column_map[$key]]) : $this -> values[$class::$column_map[$key]];
+	    }
 	}
+	else
+	{
+	    foreach($class::$column_map as $map_key => $value_key)
+	    {
+		$query	.= '?, ';
+		$values[]	= isset($this -> values[$value_key]) ? is_array($this -> values[$value_key]) ? serialize($this -> values[$value_key]) : $this -> values[$value_key] : '';
+	    }
+	}
+	
+	
 			
 	$query = substr($query, 0, -2);
-	$query .= ' WHERE `' . $class::$primary_key . '` = ' . $this -> values[$class::$column_map[$class::$primary_key]];
-			
+	$query .= ' WHERE `' . $class::$primary_key . "` = '{$this -> values[$class::$column_map[$class::$primary_key]]}'";
+	
 	$stmt = $db -> prepare($query);
 	$stmt -> execute($values);
 	$stmt -> closeCursor();
@@ -123,7 +149,7 @@ class BasicORM
     protected function insert()
     {
 	$class = get_called_class();
-	$this -> values[self::$primary_key] = 0;
+	if(!isset($this -> values[self::$primary_key])) $this -> values[self::$primary_key] = 0;
 		
 	$db	= PDOEngine::getInstance();
 	$query	= 'INSERT INTO `' . $class::$table_name .'` ( ' . implode(array_keys($class::$column_map), ',') . ') VALUES (';
@@ -132,7 +158,7 @@ class BasicORM
 	foreach($class::$column_map as $map_key => $value_key)
 	{
 	    $query	.= '?, ';
-	    $values[]	= isset($this -> values[$value_key]) ? $this -> values[$value_key] : '';
+	    $values[]	= isset($this -> values[$value_key]) ? is_array($this -> values[$value_key]) ? serialize($this -> values[$value_key]) : $this -> values[$value_key] : '';
 	}
 	
 	$query	= substr($query, 0, -2) . ')';
@@ -143,7 +169,7 @@ class BasicORM
     }
     
     public static function findOne($pkey = 0)
-    {		
+    {
 	$class	= get_called_class();
 		
 	$class::setup();
@@ -167,14 +193,21 @@ class BasicORM
 		
 	if($pkey)
 	    $stmt -> bindParam(':pkey', $pkey);
-		
-	$object	= new $class;
+	
 	$stmt -> execute();
+	
+	    
 	$stmt -> setFetchMode(PDO::FETCH_CLASS, $class);
 	$object = $stmt -> fetch();
+	
+	if(!$object)
+	    return false;
+	    
+	$object -> persisted = true;
+	    
 	$object -> clearUpdated();
 	$stmt -> closeCursor();
-		
+	
 	return $object;
     }
     
@@ -322,13 +355,13 @@ class BasicORM
 	return count($found) > 1 ? $found : $found[0];
     }
 		
-    public function save()
+    public function save($force = false)
     {
 	if(!$this -> updated) return false;
 			
-	if(isset(static::$column_map[static::$primary_key]) && !empty($this -> values[static::$column_map[static::$primary_key]]))
+	if($this -> persisted)
 	{
-	    $this -> update();
+	    $this -> update($force);
 	}
 	else
 	{

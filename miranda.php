@@ -6,10 +6,25 @@ require_once(__DIR__ . '/functions/Application.php');
 
 use miranda\autoloader\Autoloader;
 use miranda\exceptions\GeneralException;
+use miranda\plugins\Session;
 
 
 Autoloader::registerNamespace('miranda', __DIR__);
 Autoloader::registerNamespace('ryanthegreat', '/srv/http/ryanthegreat/application/');
 
-set_exception_handler('miranda\exceptions\GeneralException::handleException');
+set_exception_handler('ryanthegreat\controllers\Pages::handleException');
+if(isset($_COOKIE['miranda_sessionid']))
+{
+    $session = Session::findOne($_COOKIE['miranda_sessionid']);
+    if(!$session)
+    {
+	$session = new Session;
+	$session -> getId(true);
+    }
+}
+else
+{
+    $session = new Session;
+    $session -> getId(true);
+}
 ?>
