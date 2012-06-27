@@ -21,6 +21,7 @@ class BasicORM
     
     protected function __construct() {} /** Should not be instantiated directly */
     
+    
     public function __get($key)
     {
 	if(array_key_exists($key, static::$column_map))
@@ -40,21 +41,53 @@ class BasicORM
 	{
 	    $key = static::$column_map[$key];
 	}
-		
-	$this -> updated[]	= $key;
-	$this -> values[$key]	= $value;
-    }    
+	
+	if(!is_array(static::$accessible) || array_key_exists($key, static::$accessible))
+	{
+	    $this -> updated[]		= $key;
+	    $this -> values[$key]	= $value;;
+	}
+	else
+	    throw new GeneralException("Property: '$key' is inaccessible.");
+    }
     
+    /** Overloads the calling of object finding methods in an object context */
+    public function __call($method, $arguments)
+    {
+	$method = "static::$method";
+	array_unshift($arguments, $this);
+	
+	if(is_callable($method))
+	    return call_user_func_array($method, $arguments);
+	else
+	    return false;
+    }
+    
+    /** Overloads the calling of object finding methods in a static context */
+    public static function __callStatic($method, $arguments)
+    {
+	$method = "static::$method";
+	array_unshift($arguments, NULL);
+	
+	if(is_callable($method))
+	    return call_user_func_array($method, $arguments);
+	else
+	    return false;
+    }
+    
+    /** Assigns a table mapping for a given model */
     public function mapsTo($table_name)
     {
 	static::$table_name = $table_name;
     }
     
-    public function hasColumn($column_name, $column_map)
+    /** Establishes a colump mapping on a given model */
+    public static function hasColumn($column_name, $column_map)
     {
 	static::$column_map[$column_name] = $column_map;
     }
     
+    /** Establishes a relationship between two models */
     public function hasRelationship($relationship_alias, $relationship_class, $foreign_key)
     {
 	$this -> values[$relationship_alias] = new $relationship_class;
@@ -62,17 +95,15 @@ class BasicORM
 	$this -> values[$relationship_alias] -> setForeignKey($foreign_key);
     }
     
+    /** Sets a property on a model as accessible, doing so will make properties which have not been declared accessible inaccessible */
     public function accessible($key)
     {
-	if(is_array(static::$accessible))
-	{
-	    static::$accessible[$key] = true;
-	}
-	else
-	{
-	    static::$accessible = array();
-	    static::$accessible[$key] = true;
-	}
+	static::$accessible[$key] = true;
+    }
+    
+    public function getForeignKey()
+    {
+	return $this -> foreign_key;
     }
     
     public function setForeignKey($foreign_key)
@@ -92,15 +123,13 @@ class BasicORM
     }
     
     public function getNew()
-    {
-	$class = get_called_class();
-		
-	$new = new $class;
-	if(!empty($this -> foreign_key) && !empty($this -> values[$class::$column_map[$this -> foreign_key]]))
+    {		
+	$new = new static;
+	if(!empty($this -> foreign_key) && !empty($this -> values[static::$column_map[$this -> foreign_key]]))
 	{
 	    $foreign_key = $this -> foreign_key;
 	    $new -> setForeignKey($foreign_key);
-	    $new -> $foreign_key = $this -> values[$class::$column_map[$this -> foreign_key]];
+	    $new -> $foreign_key = $this -> values[static::$column_map[$this -> foreign_key]];
 	}
 		
 	return $new;
@@ -108,9 +137,8 @@ class BasicORM
     
     protected function update($force = false)
     {
-	$class	= get_called_class();
 	$db	= PDOEngine::getInstance();
-	$query	= 'UPDATE `' . $class::$table_name .'` SET ';
+	$query	= 'UPDATE `' . static::$table_name .'` SET ';
 	$values	= array();
 		
 	if(!is_array($this -> updated) && !$force)
@@ -121,13 +149,13 @@ class BasicORM
 	{
 	    foreach($this -> updated as $key)
 	    {
-		$query	= $query . $class::$column_map[$key] . ' = ?, ';
-		$values[]	= is_array($this -> values[$class::$column_map[$key]]) ? serialize($this -> values[$class::$column_map[$key]]) : $this -> values[$class::$column_map[$key]];
+		$query	= $query . static::$column_map[$key] . ' = ?, ';
+		$values[]	= is_array($this -> values[static::$column_map[$key]]) ? serialize($this -> values[static::$column_map[$key]]) : $this -> values[static::$column_map[$key]];
 	    }
 	}
 	else
 	{
-	    foreach($class::$column_map as $map_key => $value_key)
+	    foreach(static::$column_map as $map_key => $value_key)
 	    {
 		$query	.= '?, ';
 		$values[]	= isset($this -> values[$value_key]) ? is_array($this -> values[$value_key]) ? serialize($this -> values[$value_key]) : $this -> values[$value_key] : '';
@@ -137,7 +165,7 @@ class BasicORM
 	
 			
 	$query = substr($query, 0, -2);
-	$query .= ' WHERE `' . $class::$primary_key . "` = '{$this -> values[$class::$column_map[$class::$primary_key]]}'";
+	$query .= ' WHERE `' . static::$primary_key . "` = '{$this -> values[static::$column_map[static::$primary_key]]}'";
 	
 	$stmt = $db -> prepare($query);
 	$stmt -> execute($values);
@@ -148,14 +176,13 @@ class BasicORM
 		
     protected function insert()
     {
-	$class = get_called_class();
 	if(!isset($this -> values[self::$primary_key])) $this -> values[self::$primary_key] = 0;
 		
 	$db	= PDOEngine::getInstance();
-	$query	= 'INSERT INTO `' . $class::$table_name .'` ( ' . implode(array_keys($class::$column_map), ',') . ') VALUES (';
+	$query	= 'INSERT INTO `' . static::$table_name .'` ( ' . implode(array_keys(static::$column_map), ',') . ') VALUES (';
 	$values	= array();
 		
-	foreach($class::$column_map as $map_key => $value_key)
+	foreach(static::$column_map as $map_key => $value_key)
 	{
 	    $query	.= '?, ';
 	    $values[]	= isset($this -> values[$value_key]) ? is_array($this -> values[$value_key]) ? serialize($this -> values[$value_key]) : $this -> values[$value_key] : '';
@@ -164,40 +191,54 @@ class BasicORM
 	$query	= substr($query, 0, -2) . ')';
 	$stmt	= $db -> prepare($query);
 	$stmt -> execute($values);
-	$this -> values[$class::$primary_key] = $db -> lastInsertId();
+	$this -> values[static::$primary_key] = $db -> lastInsertId();
 	$stmt -> closeCursor();
+	$this -> persisted = true;
     }
     
-    public static function findOne($pkey = 0)
-    {
-	$class	= get_called_class();
-		
-	$class::setup();
+    protected static function findOne($refobject = NULL, $pkey = 0)
+    {		
+	if(isset($refobject) && ($foreign_key = $refobject -> getForeignKey()) != NULL)
+	{
+	    $use_foreign_key	= true;
+	    $foreign_key_value	= $refobject -> $foreign_key;
+	}
+	else
+	{
+	    $use_foreign_key = false;
+	    static::setup();
+	}
 		
 	$cache = CacheFactory::getInstance(CACHE_DEFAULT);
-	if($object = $cache -> get($class::$table_name . '_' . $pkey)) return $object;
+	if($object = $cache -> get(static::$table_name . '_' . $pkey)) return $object;
 
 	$db	= PDOEngine::getInstance();
 	$query	= "SELECT ";
-	$keys 	= implode(',', array_keys($class::$column_map));
+	$keys 	= implode(',', array_keys(static::$column_map));
 		
-	$query .= $keys . ' FROM `' . $class::$table_name . '` ';
+	$query .= $keys . ' FROM `' . static::$table_name . '` ';
 		
 	if($pkey)
 	{
-	    $query .= 'WHERE `' . $class::$primary_key . '` = :pkey ';
+	    $query .= 'WHERE `' . static::$primary_key . '` = :pkey ';
 	}
+	
+	if($use_foreign_key)
+	    $query .= "&& `$foreign_key` = :fkey "; 
 		
 	$query .= 'LIMIT 1';
 	$stmt = $db -> prepare($query);
 		
 	if($pkey)
 	    $stmt -> bindParam(':pkey', $pkey);
+	    
+	if($use_foreign_key)
+	    $stmt -> bindParam(':fkey', $foreign_key_value);
 	
 	$stmt -> execute();
 	
 	    
-	$stmt -> setFetchMode(PDO::FETCH_CLASS, $class);
+	$stmt -> setFetchMode(PDO::FETCH_CLASS, get_called_class());
 	$object = $stmt -> fetch();
 	
 	if(!$object)
@@ -211,29 +252,33 @@ class BasicORM
 	return $object;
     }
     
-    public function find($limit = 0, $order_by = '', $sort_order = 'ASC')
+    protected static function find($refobject = NULL, $limit = 0, $order_by = '', $sort_order = 'ASC')
     {
-	$class = get_called_class();
-		
-	if(!isset($this -> foreign_key) || !isset($this -> values[$class::$column_map[$this -> foreign_key]]) || !($foreign_key_value = $this -> values[$class::$column_map[$this -> foreign_key]]))
+	/** Check context in which we were called */
+	if(isset($refobject) && ($foreign_key = $refobject -> getForeignKey()) != NULL)
 	{
-	    return false;
+	    $use_foreign_key	= true;
+	    $foreign_key_value	= $refobject -> $foreign_key;
 	}
-		
-	$db		= PDOEngine::getInstance();
+	else
+	{
+	    $use_foreign_key = false;
+	    static::setup();
+	}
+	
+	$db	= PDOEngine::getInstance();
 	$query	= "SELECT ";
-	$keys 	= implode(',', array_keys($class::$column_map));
+	$keys 	= implode(',', array_keys(static::$column_map));
 		
-	$query .= $keys . ' FROM `' . $class::$table_name . '` ';
-		
-	$query .= 'WHERE `'. $this -> foreign_key .'` = :fkey';
-		
+	$query .= $keys . ' FROM `' . static::$table_name . '`';
+	
+	if($use_foreign_key)
+	    $query .= " WHERE $foreign_key = :fkey";
+	
 	if($limit)
 	    $query .= ' LIMIT :limit ';
-			
-		
-			
-	if(!empty($order_by) && isset($class::$column_map[$order_by]))
+	    
+	if(!empty($order_by) && isset(staic::$column_map[$order_by]))
 	{
 	    if($sort_order != 'ASC')
 	    {
@@ -244,8 +289,10 @@ class BasicORM
 	}		
 		
 	$stmt = $db -> prepare($query);
-		
-	$stmt -> bindParam(':fkey', $foreign_key_value);
+
+	
+	if($use_foreign_key)
+	    $stmt -> bindParam(':fkey', $foreign_key_value);
 		
 	if($limit)
 	{
@@ -253,40 +300,53 @@ class BasicORM
 	}
 		
 	$found	= array();
-	$object	= new $class;
 		
 	$stmt -> execute();
-	$stmt -> setFetchMode(PDO::FETCH_CLASS, $class);
+	$stmt -> setFetchMode(PDO::FETCH_CLASS, get_called_class());
 		
 	while($object = $stmt -> fetch())
 	{
 	    $object -> clearUpdated();
+	    $object -> persisted = true;
 	    $found[] = $object;
-	}
-		
+	}		
 	$stmt -> closeCursor();
+
+	/** No results found, return false to signify the query was unsuccessful */
+	if(!count($found)) return false;
 		
 	return count($found) > 1 ? $found : $found[0];
     }
     
-    public static function findBy($key = '', $value = '', $limit = 0, $order_by = '', $sort_order = 'ASC')
+    protected static function findBy($refobject = NULL, $key = '', $value = '', $limit = 0, $order_by = '', $sort_order = 'ASC')
     {
-	$class	= get_called_class();
-		
-	$class::setup();
+	/** Check context in which we were called */
+	if(isset($refobject) && ($foreign_key = $refobject -> getForeignKey()) != NULL)
+	{
+	    $use_foreign_key	= true;
+	    $foreign_key_value	= $refobject -> $foreign_key;
+	}
+	else
+	{
+	    $use_foreign_key = false;
+	    static::setup();
+	}
 		
 	$db	= PDOEngine::getInstance();
 	$query	= "SELECT ";
-	$keys 	= implode(',', array_keys($class::$column_map));
+	$keys 	= implode(',', array_keys(static::$column_map));
 		
-	$query .= $keys . ' FROM `' . $class::$table_name . '` ';
+	$query .= $keys . ' FROM `' . static::$table_name . '` ';
 		
-	if(!empty($key) && !empty($value) && in_array($key, array_keys($class::$column_map)))
+	if(!empty($key) && !empty($value) && in_array($key, array_keys(static::$column_map)))
 	    $query .= "WHERE `$key` = :value";
+	    
+	if($use_foreign_key)
+	    $query .= " && `$foreign_key` = :fkey";
 		
 	if($limit) $query .= ' LIMIT :limit ';
 			
-	if(!empty($order_by) && isset($class::$column_map[$order_by]))
+	if(!empty($order_by) && isset(static::$column_map[$order_by]))
 	{
 	    if($sort_order != 'ASC')
 	    {
@@ -298,59 +358,97 @@ class BasicORM
 	$stmt = $db -> prepare($query);	
 		
 	if(!empty($key) && !empty($value))
-	{
 	    $stmt -> bindParam(':value', $value);
-	}
+	    
+	if($use_foreign_key)
+	    $stmt -> bindParam(':fkey', $foreign_key_value);
+	    
 	if($limit)
-	{
 	    $stmt -> bindParam(':limit', $limit, PDO::PARAM_INT);
-	}
 		
 	$found = array();
-	$object	= new $class;
 	$stmt -> execute();
-	$stmt -> setFetchMode(PDO::FETCH_CLASS, $class);
+	$stmt -> setFetchMode(PDO::FETCH_CLASS, get_called_class());
 		
 	while($object = $stmt -> fetch())
 	{
 	    $object -> clearUpdated();
+	    $object -> persisted = true;
 	    $found[] = $object;
 	}
 		
 	$stmt -> closeCursor();
+	
+	/** No results found, return false to signify the query was unsuccessful */
+	if(!count($found)) return false;
 		
 	return count($found) > 1 ? $found : $found[0];
     }
     
-    public static function where($where, $values)
+    protected static function where($refobject = NULL, $where = '', $values = array(), $limit = 0, $order_by = '', $sort_order = 'ASC')
     {
-	$class = get_called_class();
-	$class::setup();
-		
+	/** Check context in which we were called */
+	if(isset($refobject) && ($foreign_key = $refobject -> getForeignKey()) != NULL)
+	{
+	    $use_foreign_key	= true;
+	    $foreign_key_value	= $refobject -> $foreign_key;
+	}
+	else
+	{
+	    $use_foreign_key = false;
+	    static::setup();
+	}
+	
+	if(!is_array($values)) $values = [$values];
 		
 	$db	= PDOEngine::getInstance();
 	$query	= "SELECT ";
-	$keys 	= implode(',', array_keys($class::$column_map));
+	$keys 	= implode(',', array_keys(static::$column_map));
 		
-	$query .= $keys . ' FROM `' . $class::$table_name . '` ';
+	$query .= $keys . ' FROM `' . static::$table_name . '` ';
 		
 	$query .= "WHERE $where";
-		
+	
+	if($use_foreign_key)
+	{
+	    $query .= " && `$foreign_key` = ?";
+	    $values[] = $foreign_key_value;
+	}
+	
+	if($limit)
+	{
+	    $query .= " LIMIT $limit";
+	}
+			
+	if(!empty($order_by) && isset(static::$column_map[$order_by]))
+	{
+	    if($sort_order != 'ASC')
+	    {
+		$sort_order = 'DESC';
+	    }
+			
+	    $query .= " ORDER BY `$order_by` $sort_order";
+	}
+	
 	$stmt = $db -> prepare($query);
+	    
 	$stmt -> execute($values);
 		
 	$found = array();
-	$object	= new $class;
 	$stmt -> execute();
-	$stmt -> setFetchMode(PDO::FETCH_CLASS, $class);
+	$stmt -> setFetchMode(PDO::FETCH_CLASS, get_called_class());
 		
 	while($object = $stmt -> fetch())
 	{
 	    $object -> clearUpdated();
+	    $object -> persisted = true;
 	    $found[] = $object;
 	}
 		
 	$stmt -> closeCursor();
+	
+	/** No results found, return false to signify the query was unsuccessful */
+	if(!count($found)) return false;
 		
 	return count($found) > 1 ? $found : $found[0];
     }

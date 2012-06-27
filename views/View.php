@@ -4,7 +4,10 @@ namespace miranda\views;
 class View
 {
 
-    protected $visible = array();
+    protected $visible		= array();
+    protected $css		= array();
+    protected $js		= array();
+    protected $append_js	= array();
     
     private static function escape($value)
     {
@@ -12,6 +15,21 @@ class View
 	    return htmlentities($value, ENT_QUOTES, SITE_CHARSET);
 	else
 	    return $value;
+    }
+    
+    public function css($stylesheet)
+    {
+	$this -> css[] = self::escape($stylesheet);
+    }
+    
+    public function js($source)
+    {
+	$this -> js[] = self::escape($source);
+    }
+    
+    public function append_js($source)
+    {
+	$this -> append_js[] = self::escape($source);
     }
     
     public function setVisible($set, $value = '')

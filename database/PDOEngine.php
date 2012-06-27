@@ -62,16 +62,16 @@ Class PDOEngine extends PDO
 	return new PDOEngine($strDSN, $strUsername, $strPassword);
     }
     
-    public function prepare()
+    public function prepare($statement, $options = NULL)
     {
-	$arguments	= func_get_args();
+	if(!$options) $options = [];
 	$start		= microtime(true);
-	$result		= call_user_func_array(array($this, 'parent::prepare'), $arguments);
+	$result		= parent::prepare($statement, $options);
 	$end		= microtime(true);
 		
 	if(LOG_ALL_QUERIES)
 	{
-	    SystemLogger::log_to_file('query.log', $arguments[0]);
+	    SystemLogger::log_to_file('query.log', $statement);
 	}
 		
 	return $result;
