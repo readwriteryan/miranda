@@ -13,16 +13,7 @@ Autoloader::registerNamespace('miranda', __DIR__);
 Autoloader::registerNamespace('ryanthegreat', '/srv/http/ryanthegreat/application/');
 
 set_exception_handler('ryanthegreat\controllers\Pages::handleException');
-if(isset($_COOKIE['miranda_sessionid']))
-{
-    $session = Session::findOne($_COOKIE['miranda_sessionid']);
-    if(!$session || !$session -> validate())
-    {
-	$session = new Session;
-	$session -> getId(true);
-    }
-}
-else
+if(!isset($_COOKIE['miranda_sessionid']) || !($session = Session::findOne($_COOKIE['miranda_sessionid'])) || !$session -> validate())
 {
     $session = new Session;
     $session -> getId(true);
