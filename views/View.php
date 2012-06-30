@@ -20,16 +20,22 @@ class View
     public function css($stylesheet)
     {
 	$this -> css[] = self::escape($stylesheet);
+	
+	return $this;
     }
     
     public function js($source)
     {
 	$this -> js[] = self::escape($source);
+	
+	return $this;
     }
     
     public function append_js($source)
     {
 	$this -> append_js[] = self::escape($source);
+	
+	return $this;
     }
     
     public function setVisible($set, $value = '')
@@ -48,11 +54,15 @@ class View
 		}
 	    }
 	}
+	
+	return $this;
     }
     
     public function clearVisible()
     {
 	$this -> visible = array();
+	
+	return $this;
     }
     
     public function render($view = '')

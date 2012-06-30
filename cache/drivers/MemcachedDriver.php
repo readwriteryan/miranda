@@ -9,7 +9,7 @@ class MemcachedDriver implements CacheInterface
 	public function __construct($memcachedServer = MEMCACHED_SERVER, $memcachedPort = MEMCACHED_PORT)
 	{
 	    $memcached = new \Memcached();
-	    $memcached -> connect($memcachedServer, $memcachedPort);
+	    $memcached -> addServer($memcachedServer, $memcachedPort);
 		
 	    $this -> engine = $memcached;
 	}
@@ -27,12 +27,12 @@ class MemcachedDriver implements CacheInterface
 	
 	public function set($key, $value, $expire)
 	{
-	    return $this -> engine -> set($key, $value, false, $expire);
+	    return $this -> engine -> set($key, $value, $expire);
 	}
 	
 	public function add($key, $value, $expire)
 	{
-	    return $this -> engine -> add($key, $value, false, $expire);
+	    return $this -> engine -> add($key, $value, $expire);
 	}
 	
 	public function delete($key)

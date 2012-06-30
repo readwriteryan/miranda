@@ -23,7 +23,7 @@ define('GLOBAL_FOOTER', WEB_ROOT . 'views/global/footer.html.php');
 /** Caching Definitions */
 define('CACHE_BASE', MIRANDA_ROOT . 'cache/');
 define('CACHE_NAMESPACE',  'miranda\\cache\\');
-define('CACHE_DEFAULT', 'memcache');
+define('CACHE_DEFAULT', 'memcached');
 
 /** Memcached Definitions */
 define('MEMCACHED_SERVER', 'localhost');

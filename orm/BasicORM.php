@@ -4,6 +4,7 @@ namespace miranda\ORM;
 use miranda\database\PDOEngine;
 use miranda\cache\CacheFactory;
 use miranda\exceptions\GeneralException;
+use miranda\plugins\Pagination;
 use PDO;
 
 class BasicORM
@@ -274,11 +275,8 @@ class BasicORM
 	
 	if($use_foreign_key)
 	    $query .= " WHERE $foreign_key = :fkey";
-	
-	if($limit)
-	    $query .= ' LIMIT :limit ';
 	    
-	if(!empty($order_by) && isset(staic::$column_map[$order_by]))
+	if(!empty($order_by) && isset(static::$column_map[$order_by]))
 	{
 	    if($sort_order != 'ASC')
 	    {
@@ -286,18 +284,26 @@ class BasicORM
 	    }
 			
 	    $query .= " ORDER BY `$order_by` $sort_order";
-	}		
+	}
+	
+	if($limit)
+	{
+	    if(!is_numeric($limit))
+	    {
+		list($start, $amount) = array_map('intval', explode(',', $limit));
+		$query .= " LIMIT $start,$amount";
+	    }
+	    else
+	    {
+		$query .= "LIMIT $limit";
+	    }
+	}
 		
 	$stmt = $db -> prepare($query);
 
 	
 	if($use_foreign_key)
 	    $stmt -> bindParam(':fkey', $foreign_key_value);
-		
-	if($limit)
-	{
-	    $stmt -> bindParam(':limit', $limit, PDO::PARAM_INT);
-	}
 		
 	$found	= array();
 		
@@ -344,7 +350,6 @@ class BasicORM
 	if($use_foreign_key)
 	    $query .= " && `$foreign_key` = :fkey";
 		
-	if($limit) $query .= ' LIMIT :limit ';
 			
 	if(!empty($order_by) && isset(static::$column_map[$order_by]))
 	{
@@ -355,6 +360,20 @@ class BasicORM
 			
 	    $query .= " ORDER BY `$order_by` $sort_order";
 	}
+	
+	if($limit)
+	{
+	    if(!is_numeric($limit))
+	    {
+		list($start, $amount) = array_map('intval', explode(',', $limit));
+		$query .= " LIMIT $start,$amount";
+	    }
+	    else
+	    {
+		$query .= "LIMIT $limit";
+	    }
+	}	
+	
 	$stmt = $db -> prepare($query);	
 		
 	if(!empty($key) && !empty($value))
@@ -362,9 +381,6 @@ class BasicORM
 	    
 	if($use_foreign_key)
 	    $stmt -> bindParam(':fkey', $foreign_key_value);
-	    
-	if($limit)
-	    $stmt -> bindParam(':limit', $limit, PDO::PARAM_INT);
 		
 	$found = array();
 	$stmt -> execute();
@@ -414,11 +430,6 @@ class BasicORM
 	    $query .= " && `$foreign_key` = ?";
 	    $values[] = $foreign_key_value;
 	}
-	
-	if($limit)
-	{
-	    $query .= " LIMIT $limit";
-	}
 			
 	if(!empty($order_by) && isset(static::$column_map[$order_by]))
 	{
@@ -428,6 +439,19 @@ class BasicORM
 	    }
 			
 	    $query .= " ORDER BY `$order_by` $sort_order";
+	}
+	
+	if($limit)
+	{
+	    if(!is_numeric($limit))
+	    {
+		list($start, $amount) = array_map('intval', explode(',', $limit));
+		$query .= " LIMIT $start,$amount";
+	    }
+	    else
+	    {
+		$query .= "LIMIT $limit";
+	    }
 	}
 	
 	$stmt = $db -> prepare($query);
@@ -467,14 +491,33 @@ class BasicORM
 	}
 		
 	$this -> cache();
+	return true;
     }
+    
+    public function delete()
+    {
+	$db = PDOEngine::getInstance();
+	$query = 'DELETE FROM `' . static::$table_name . '` WHERE `' . static::$primary_key . '` = :pkey LIMIT 1';
 	
+	$stmt = $db -> prepare($query);
+	
+	$stmt -> bindParam(':pkey', $this -> values[static::$column_map[static::$primary_key]]);
+	
+	$stmt -> execute();
+	$stmt -> closeCursor();
+    }
+    
     public function cache()
     {
 	if(!$this -> cacheable) return false;
 		
 	$cache = CacheFactory::getInstance(CACHE_DEFAULT);
 	$cache -> set('models_' . static::$table_name . '_' . $this -> values[static::$column_map[static::$primary_key]], $this, $this -> cache_expire);
+    }
+    
+    public static function paginate($page, $per_page = 10)
+    {
+	return new Pagination(get_called_class(), $page, $per_page);
     }
 }
 ?>
