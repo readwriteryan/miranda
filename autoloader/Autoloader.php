@@ -17,8 +17,7 @@ Class Autoloader
     public static function registerNamespace($namespace, $location)
     {
 	self::$namespaces[$namespace] = $location;
-		
-	return self::$registered ? true : self:: register();
+	return self::$registered ? true : self::register();
     }
     
     public static function autoload($loadNamespace)
