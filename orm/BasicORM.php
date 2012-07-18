@@ -83,8 +83,10 @@ class BasicORM
     }
     
     /** Establishes a colump mapping on a given model */
-    public static function hasColumn($column_name, $column_map)
+    public static function hasColumn($column_name, $column_map = NULL)
     {
+	if(!$column_map) $column_map = $column_name;
+	
 	static::$column_map[$column_name] = $column_map;
     }
     
@@ -210,7 +212,7 @@ class BasicORM
 	    static::setup();
 	}
 		
-	$cache = CacheFactory::getInstance(CACHE_DEFAULT);
+	$cache = CacheFactory::getInstance();
 	if($object = $cache -> get(static::$table_name . '_' . $pkey)) return $object;
 
 	$db	= PDOEngine::getInstance();
@@ -511,7 +513,7 @@ class BasicORM
     {
 	if(!$this -> cacheable) return false;
 		
-	$cache = CacheFactory::getInstance(CACHE_DEFAULT);
+	$cache = CacheFactory::getInstance();
 	$cache -> set('models_' . static::$table_name . '_' . $this -> values[static::$column_map[static::$primary_key]], $this, $this -> cache_expire);
     }
     

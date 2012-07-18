@@ -1,6 +1,7 @@
 <?php
 namespace miranda\controllers;
 use miranda\cache\CacheFactory;
+use miranda\config\Config;
 
 Class Request
 {
@@ -8,12 +9,12 @@ Class Request
     
     protected $path;
     protected $method;
-    protected $mapping = array(
-			 'get'		=> GET_REQUEST,
-			 'post' 	=> POST_REQUEST,
-			 'put' 		=> PUT_REQUEST,
-			 'delete' 	=> DELETE_REQUEST,
-			 'default'	=> GET_REQUEST);
+    protected static $mapping = array(
+				    'get'	=> 1,
+				    'post' 	=> 2,
+				    'put'	=> 3,
+				    'delete' 	=> 4,
+				    'default'	=> 1);
     
     protected function __construct()
     {
@@ -33,6 +34,11 @@ Class Request
 	return $this -> $member;
     }
     
+    public static function mapping($key)
+    {
+	return isset(self::$mapping[strtolower($key)]) ? self::$mapping[strtolower($key)] : false;
+    }
+    
     private function getMethod()
     {
 	$method = strtolower($_SERVER['REQUEST_METHOD']);
@@ -40,8 +46,8 @@ Class Request
 	if(isset($_POST['http_method_override']))
 	    $method = strtolower($_POST['http_method_override']);
 		
-	if(isset($this -> mapping[$method]))	$this -> method = $this -> mapping[$method];
-	else					$this -> method = $this -> mapping['default'];
+	if(isset(self::$mapping[$method]))	$this -> method = self::$mapping[$method];
+	else					$this -> method = self::$mapping['default'];
 		
     }
     
@@ -62,22 +68,22 @@ Class Route
     
     public static function get($route, $action, $restrictions = array())
     {
-	self::$routes[GET_REQUEST][self::processRoute($route, $restrictions)] = $action; 
+	self::$routes[Request::mapping('get')][self::processRoute($route, $restrictions)] = $action; 
     }
     
     public static function post($route, $action, $restrictions = array())
     {
-	self::$routes[POST_REQUEST][self::processRoute($route, $restrictions)] = $action; 
+	self::$routes[Request::mapping('post')][self::processRoute($route, $restrictions)] = $action; 
     }
     
     public static function put($route, $action, $restrictions = array())
     {
-	self::$routes[PUT_REQUEST][self::processRoute($route, $restrictions)] = $action; 
+	self::$routes[Request::mapping('put')][self::processRoute($route, $restrictions)] = $action; 
     }
     
     public static function delete($route, $action, $restrictions = array())
     {
-	self::$routes[DELETE_REQUEST][self::processRoute($route, $restrictions)] = $action; 
+	self::$routes[Request::mapping('delete')][self::processRoute($route, $restrictions)] = $action; 
     }
     
     public static function custom($route, $action, $method)
@@ -85,9 +91,7 @@ Class Route
 	$method 	= strtolower($method);
 	$request 	= Request::getInstance();
 		
-		
-	if(isset($request -> mapping[$method]))	$method = $request -> mapping[$method];
-	else					$method = $request -> mapping['default'];
+	if(!($method = Request::mapping($method))) $method = Request::mapping('default');
 		
 	self::$routes[$method][self::processRoute($route)] = $action;
     }
@@ -99,21 +103,22 @@ Class Route
     
     public static function root($action)
     {
-	self::$root				= $action;
-	self::$routes[GET_REQUEST]['/']		= $action;
+	self::$root					= $action;
+	self::$routes[Request::mapping('get')]['/']	= $action;
     }
     
     public static function start()
     {
 	$request	= Request::getInstance();
 	$params		= array();
+	
 		
 	if($request -> path != false)
 	{
 	    /** Find route matching supplied path */
 	    if(isset(self::$routes[$request -> method]))
 	    {
-		$cache = CacheFactory::getInstance(CACHE_DEFAULT);
+		$cache = CacheFactory::getInstance();
 				
 		/** Load route actions from cache if possible */
 		if($result = $cache -> get('routes_' . md5($request -> path)))
@@ -121,7 +126,7 @@ Class Route
 		    $action 				= $result[0];
 		    $params				= array_slice($result, 1);
 		    list($controller, $function)	= explode('#', $action);
-		    $controller 			= CONTROLLERS_NAMESPACE . $controller;
+		    $controller 			= Config::get('namespace', 'controllers') . $controller;
 		    $controller				= $controller::getInstance($params);
 		    	
 		    $controller -> $function();
@@ -135,7 +140,7 @@ Class Route
 			{
 			    $params 				= array_slice($params, 1);
 			    list($controller, $function)	= explode('#', $action);
-			    $controller				= CONTROLLERS_NAMESPACE . $controller;
+			    $controller				= Config::get('namespace', 'controllers') . $controller;
 			    $controller 			= $controller::getInstance($params);
 			    
 			    /** Cache the route, action and params for faster processing */
@@ -151,7 +156,7 @@ Class Route
 			
 	    /** Trigger default route */
 	    list($controller, $function)	= explode('#', self::$default_route);
-	    $controller				= CONTROLLERS_NAMESPACE . $controller;
+	    $controller				= Config::get('namespace', 'controllers') . $controller;
 	    $controller 			= $controller::getInstance($params);
 	
 	    $controller -> $function();
@@ -160,7 +165,7 @@ Class Route
 	{
 	    /** Trigger root route */
 	    list($controller, $function)	= explode('#', self::$root);
-	    $controller				= CONTROLLERS_NAMESPACE . $controller;
+	    $controller				= Config::get('namespace', 'controllers') . $controller;
 	    $controller 			= $controller::getInstance($params);
 			
 	    $controller -> $function();
@@ -170,15 +175,15 @@ Class Route
     protected static function processRoute($route, $restrict)
     {
 	$original_route	= $route;
-	$cache		= CacheFactory::getInstance(CACHE_DEFAULT);
+	$cache		= CacheFactory::getInstance();
 		
 	/** Read route information from cache if possible */
 	if($cacheRoute = $cache -> get('route_rewrite_' . md5($route))) return $cacheRoute;
 		   
-	$restrictions = array(	'int' 		=> '(?P<$1>[0-9]+)',
-				'float' 	=> '(?P<$1>[0-9\.]+)',
-				'alpha' 	=> '(?P<$1>[a-zA-Z]+)',
-				'alphanum'	=> '(?P<$1>[a-zA-Z0-9]+)');
+	$restrictions = array(	'int' 		=> '(?<$1>[0-9]+)',
+				'float' 	=> '(?<$1>[0-9\.]+)',
+				'alpha' 	=> '(?<$1>[a-zA-Z]+)',
+				'alphanum'	=> '(?<$1>[a-zA-Z0-9]+)');
 			  
 	$route = str_replace(')', ')?', str_replace('(', '(?:',$route));
 		
@@ -187,7 +192,7 @@ Class Route
 	    $route = preg_replace("`:($variable)`", $restrictions[$restriction], $route);
 	}
 		
-	$route = preg_replace('`:([a-zA-Z][a-zA-Z0-9]*)`', '(?P<$1>[^/]+)', $route);
+	$route = preg_replace('`:([a-zA-Z][a-zA-Z0-9]*)`', '(?<$1>[^/]+)', $route);
 	$cache -> set('route_rewrite_' . md5($original_route), $route, 0);
 		
 	return $route;

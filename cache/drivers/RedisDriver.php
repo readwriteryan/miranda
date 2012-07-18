@@ -5,15 +5,20 @@ use miranda\cache\CacheInterface;
 
 class RedisDriver implements CacheInterface
 {
-	private $engine;
+    private $server	= 'localhost';
+    private $port	= '6379';
+    private $engine;
 	
-	public function __construct($redisServer = REDIS_SERVER, $redisPort = REDIS_PORT)
-	{
-	    $redis = new \Redis();
-	    $redis -> connect($redisServer, $redisPort);
-		
-	    $this -> engine = $redis;
-	}
+    public function __construct($server = NULL, $port = NULL)
+    {
+	$server	= $server ? $server : $this -> server;
+	$port	= $port ? $port : $this -> port;
+	
+	$redis = new \Redis();
+	$redis -> connect($server, $port);
+	
+	$this -> engine = $redis;
+    }
 	
 	public function __cal()
 	{

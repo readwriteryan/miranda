@@ -4,15 +4,20 @@ use miranda\cache\CacheInterface;
 
 class MemcacheDriver implements CacheInterface
 {
-	private $engine;
+    private $server	= 'localhost';
+    private $port	= '11211';
+    private $engine;
 	
-	public function __construct($memcacheServer = MEMCACHED_SERVER, $memcachePort = MEMCACHED_PORT)
-	{
-	    $memcache = new \Memcache();
-	    $memcache -> connect($memcacheServer, $memcachePort);
+    public function __construct($server = NULL, $port = NULL)
+    {
+	$server	= $server ? $server : $this -> server;
+	$port	= $port ? $port : $this -> port;
+	
+	$memcache = new \Memcache();
+	$memcache -> connect($server, $port);
 		
-	    $this -> engine = $memcache;
-	}
+	$this -> engine = $memcache;
+    }
 	
 	public function __cal()
 	{

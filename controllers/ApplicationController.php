@@ -2,6 +2,7 @@
 namespace miranda\controllers;
 
 use miranda\views\View;
+use miranda\config\Config;
 
 class ApplicationController
 {
@@ -13,8 +14,6 @@ class ApplicationController
     {
 	$this -> params 	= $params;
 	$this -> view 		= new View;
-		
-	$this -> view -> setVisible('params', $this -> params);
     }
     
     public static function getInstance($params)
@@ -25,6 +24,18 @@ class ApplicationController
 	    self::$instances[$class] = new $class($params);  
 		
 	return self::$instances[$class];
-    }    
+    }
+    
+    public function redirect($location)
+    {
+	header('Location: ' . Config::get('site', 'base') . $location, true, 302);
+	exit;
+    }
+    
+    public function permanentRedirect($location)
+    {
+	header('Location: ' . Config::get('site', 'base') . $location, true, 301);
+	exit;
+    }
 }
 ?>

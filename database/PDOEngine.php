@@ -5,6 +5,7 @@ use PDO;
 use PDOStatement;
 use PDOException;
 use miranda\logging\SystemLogger;
+use miranda\config\Config;
 
 Class PDOStmt extends PDOStatement
 {   
@@ -17,13 +18,13 @@ Class PDOStmt extends PDOStatement
 	if(!$result)
 	{
 	    $error_information = $this -> errorInfo();
-	    SystemLogger::log_event(QUERY_ERROR, 'Query execution failed with message: ' . $error_information[2]);
+	    SystemLogger::log_event(4, 'Query execution failed with message: ' . $error_information[2]);
 	}
 		
 	$total_time = $end - $start;
-	if($total_time > SLOW_QUERY_TIME)
+	if(Config::get('database', 'log_slow_queries') && $total_time > (float) Config::get('database', 'slow_query_time'))
 	{
-	    SystemLogger::log_event(SLOW_QUERY, 'Prepared statement containing: ' . $this -> queryString . ' took ' . $total_time . ' seconds to execute.');
+	    SystemLogger::log_event(5, 'Prepared statement containing: ' . $this -> queryString . ' took ' . $total_time . ' seconds to execute.');
 	}
     }
 }
@@ -32,12 +33,16 @@ Class PDOEngine extends PDO
 {
     private static $db_instance;
     
-    public function __construct($strDSN = DEFAULT_DSN, $strUsername = DEFAULT_USERNAME, $strPassword = DEFAULT_PASSWORD)
+    public function __construct($dsn = NULL, $username = NULL, $password = NULL)
     {
+	if(!$dsn) $dsn			= Config::get('database', 'engine') . ':dbname=' . Config::get('database', 'database') . ';host=' . Config::get('database', 'host');
+	if(!$username) $username 	= Config::get('database', 'username');
+	if(!$password) $password 	= Config::get('database', 'password');
+	
 	/** Declared private to prevent instantiation via constructor. Use Database::getInstance() for access to the singleton database object or Database::getNewInstance for a fresh connection */
 	try
 	{
-	    parent::__construct($strDSN, $strUsername, $strPassword);
+	    parent::__construct($dsn, $username, $password);
 	}
 	catch(PDOException $exception)
 	{
@@ -57,9 +62,13 @@ Class PDOEngine extends PDO
 	return self::$db_instance;
     }
     
-    public static function getNewInstance($strDSN = DEFAULT_DSN, $strUsername = DEFAULT_USERNAME, $strPassword = DEFAULT_PASSWORD)
+    public static function getNewInstance($dsn = NULL, $username = NULL, $password = NULL)
     {
-	return new PDOEngine($strDSN, $strUsername, $strPassword);
+	if(!$dsn) $dsn			= Config::get('database', 'engine') . ':dbname=' . Config::get('database', 'database') . ';host=' . Config::get('database', 'host');
+	if(!$username) $username 	= Config::get('database', 'username');
+	if(!$password) $password 	= Config::get('database', 'password');
+	
+	return new PDOEngine($dsn, $username, $password);
     }
     
     public function prepare($statement, $options = NULL)
@@ -69,7 +78,7 @@ Class PDOEngine extends PDO
 	$result		= parent::prepare($statement, $options);
 	$end		= microtime(true);
 		
-	if(LOG_ALL_QUERIES)
+	if(Config::get('database', 'log_queries'))
 	{
 	    SystemLogger::log_to_file('query.log', $statement);
 	}
@@ -85,7 +94,7 @@ Class PDOEngine extends PDO
 	$result		= call_user_func_array(array($this, 'parent::query'), $arguments);
 	$end		= microtime(true);
 		
-	if(LOG_ALL_QUERIES)
+	if(Config::get('database', 'log_queries'))
 	{
 	    SystemLogger::log_to_file('query.log', $arguments[0]);
 	}
@@ -93,13 +102,13 @@ Class PDOEngine extends PDO
 	if(!$result)
 	{
 	    $error_information = $this -> errorInfo();
-	    SystemLogger::log_event(QUERY_ERROR, 'Query execution failed with message: ' . $error_information[2]);
+	    SystemLogger::log_event(4, 'Query execution failed with message: ' . $error_information[2]);
 	}
 		
 	$total_time = $end - $start;
-	if($total_time > SLOW_QUERY_TIME)
+	if(Config::get('database', 'log_slow_queries') && $total_time > (float) Config::get('database', 'slow_query_time'))
 	{
-	    SystemLogger::log_event(SLOW_QUERY, 'Query containing: ' . $arguments[0] . ' took ' . $total_time . ' seconds to execute.');
+	    SystemLogger::log_event(5, 'Query containing: ' . $arguments[0] . ' took ' . $total_time . ' seconds to execute.');
 	}
     }
 }

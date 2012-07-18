@@ -5,6 +5,16 @@ use PDO;
 use miranda\database\pdoengine;
 use miranda\exceptions\SystemException;
 
+/** Logging Definitions */
+define('LOG_GENERAL_EXCEPTIONS', 1);						/** 1 to log general exceptions, 0 to turn logging off */
+define('LOG_SECURITY_EXCEPTIONS', 1);						/** 1 to log security exceptions, 0 to turn logging off */
+define('LOG_SYSTEM_EXCEPTIONS', 1); 						/** 1 to log system exceptions, 0 to turn logging off */
+define('LOG_TO_DATABASE', 1);							/** 1 to turn logging to a database table on, 0 to disable */
+define('LOG_TABLE_NAME', 'system_logs');					/** If database logging is enabled, system logs will be saved to this table */
+define('LOG_TO_FILE', 1);							/** 1 to turn logging to the filesystem on, 0 to disable */
+define('LOG_FILE', 'system.log');						/** If filesystem logging is enabled, system logs will be saved to this file name */
+define('LOG_FILE_LOCATION', '/srv/http/ryanthegreat/application/logs/'); 	/** If filesystem logging is enabled, system logs will be saved in this location */
+
 Class SystemLogger
 {
     private static function getFileHandle($strLocation)

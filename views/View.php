@@ -1,58 +1,68 @@
 <?php
 namespace miranda\views;
 
+use miranda\config\Config;
+
 class View
 {
 
-    protected $visible		= array();
-    protected $css		= array();
-    protected $js		= array();
-    protected $append_js	= array();
+    protected $visible	= array();
+    public $css		= array();
+    public $js		= array();
     
     private static function escape($value)
     {
 	if(is_string($value))
-	    return htmlentities($value, ENT_QUOTES, SITE_CHARSET);
+	    return htmlentities($value, ENT_QUOTES, Config::get('site', 'charset'));
+	else if(is_array($value))
+	    return array_map('self::escape', $value);
 	else
 	    return $value;
     }
     
     public function css($stylesheet)
     {
-	$this -> css[] = self::escape($stylesheet);
+	$this -> css[] = format('css/' . self::escape($stylesheet) . '.css');
 	
 	return $this;
     }
     
     public function js($source)
     {
-	$this -> js[] = self::escape($source);
+	$this -> js[] = format('js/' . self::escape($source) . '.js');
 	
 	return $this;
     }
     
-    public function append_js($source)
-    {
-	$this -> append_js[] = self::escape($source);
-	
-	return $this;
-    }
-    
-    public function setVisible($set, $value = '')
+    public function visible($set, $value = '')
     {
 	if(is_array($set))
 	{
 	    foreach($set as $key => $value)
 	    {
-		if(is_array($value))
-		{
-		    $this -> visible[$key] = array_map('self::escape', $value);
-		}
-		else
-		{
-		    $this -> visible[$key] = self::escape($value);
-		}
+		$this -> visible[$key] = self::escape($value);
 	    }
+	}
+	else
+	{
+	    $this -> visible[$set] = self::escape($value);
+	}
+	
+	return $this;
+    }
+    
+    public function raw($set, $value = '')
+    {
+	if(is_array($set))
+	{
+	    foreach($set as $key => $value)
+	    {
+		$this -> visible[$key] = $value;
+	    }
+	}
+	else
+	{
+	    $this -> visible[$set] = $value;
 	}
 	
 	return $this;
@@ -65,14 +75,20 @@ class View
 	return $this;
     }
     
-    public function render($view = '')
+    public function render($view)
     {
 	extract($this -> visible);
 		
-	if(defined('GLOBAL_TEMPLATE')) require_once(GLOBAL_TEMPLATE);
+	if($template = Config::get('views', 'template')) require_once(Config::get('site', 'webroot') . '/views/global/' . $template);
 		
-	require_once(VIEWS_BASE . $view . '.html.php');
+	require_once(Config::get('site', 'webroot') . '/views/' . $view . '.html.php');
 		
-	if(defined('GLOBAL_FOOTER')) require_once(GLOBAL_FOOTER); 
+	if($footer = Config::get('views', 'footer')) require_once(Config::get('site', 'webroot') . '/views/global/' . $footer); 
+    }
+    
+    public function render_partial($partial, $visible = NULL)
+    {
+	if(is_array($visible)) extract($visible);
+	require(Config::get('site', 'webroot') . 'views/partials/' . $partial .'.html.php');
     }
 }
