@@ -31,8 +31,7 @@ class ResultCache
 		if($value) return $engine -> set($key, $value, $expire);
 		else if(is_callable($closure))
 		{
-			$value = $closure();
-			$engine -> set($key, $value, $expire);
+			$engine -> set($key, $value = $closure(), $expire);
 			return $value;
 		}
 		
@@ -48,8 +47,7 @@ class ResultCache
 		if($value) return $engine -> add($key, $value, $expire);
 		else if(is_callable($closure))
 		{
-			$value = $closure();
-			$engine -> add($key, $value, $expire);
+			$engine -> add($key, $value = $closure(), $expire);
 			return $value;
 		}
 		

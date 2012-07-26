@@ -5,7 +5,6 @@ use miranda\config\Config;
 
 class View
 {
-
     protected $visible	= [];
     public $css		= [];
     public $js		= [];

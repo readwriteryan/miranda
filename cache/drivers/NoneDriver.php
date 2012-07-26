@@ -4,7 +4,6 @@ use miranda\cache\CacheInterface;
 
 class NoneDriver implements CacheInterface
 {
-    
 	public function __construct()
 	{
 	    
