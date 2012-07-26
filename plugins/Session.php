@@ -1,8 +1,8 @@
 <?php
 namespace miranda\plugins;
-use miranda\orm\BasicORM;
+use miranda\orm\ORM;
 
-class Session extends BasicORM
+class Session extends ORM
 {
     protected static $table_name	= 'sessions';
     protected static $primary_key	= 'session_id';
@@ -18,7 +18,7 @@ class Session extends BasicORM
     {
 	$this -> session_last_active = time();
 	
-	/** Remove the special one-time use flash data if it has not just been set on this page load */
+	/** Remove the flash data if it has not just been set on this page load */
 	if(isset($this -> values['session_data']['flash']) && $this -> values['session_data']['flash_set'] == false)
 	    unset($this -> values['session_data']['flash']);    
 	
@@ -59,6 +59,14 @@ class Session extends BasicORM
 	}
     }
     
+    private function init()
+    {
+	$this -> session_id		= uniqid(mt_rand(1000000, 9999999), true);
+	$this -> session_ip		= $_SERVER['REMOTE_ADDR'];
+	$this -> session_ua 		= $_SERVER['HTTP_USER_AGENT'];
+	$this -> values['session_data']	= array();
+    }
+    
     public function validate()
     {
 	$this -> flash_set = false;
@@ -87,9 +95,7 @@ class Session extends BasicORM
     {
 	if($regenerate)
 	{
-	    $this -> session_id	= uniqid(mt_rand(1000000, 9999999), true);
-	    $this -> session_ip	= $_SERVER['REMOTE_ADDR'];
-	    $this -> session_ua = $_SERVER['HTTP_USER_AGENT'];
+	    $this -> init();
 	    
 	    setcookie('miranda_sessionid', $this -> values['session_id'], 0, '/');
 	}

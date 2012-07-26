@@ -2,10 +2,11 @@
 namespace miranda\cache;
 
 use miranda\cache\CacheFactory;
+use miranda\config\Config;
 
 class ResultCache
 {
-	public static function get($key, $closure = NULL, $driver = NULL)
+	public static function get($key, $closure = NULL, $expire = 0, $driver = NULL)
 	{
 		if(!$driver) $driver = Config::get('cache', 'default') ? Config::get('cache', 'default') : 'none';
 		
@@ -14,15 +15,14 @@ class ResultCache
 		if($value = $engine -> get($key)) return $value;
 		else if(is_callable($closure))
 		{
-			$value = $closure();
-			$engine -> set($key, $value);
+			$engine -> set($key, $value = $closure(), $expire);
 			return $value;
 		}
 		
 		return false;
 	}
 	
-	public static function set($key, $value, $expire, $closure = NULL, $driver = NULL)
+	public static function set($key, $value, $expire = 0, $closure = NULL, $driver = NULL)
 	{
 		if(!$driver) $driver = Config::get('cache', 'default') ? Config::get('cache', 'default') : 'none';
 		
@@ -39,7 +39,7 @@ class ResultCache
 		return false;
 	}
 	
-	public static function add($key, $value, $expire, $closure = NULL, $driver = NULL)
+	public static function add($key, $value, $expire = 0, $closure = NULL, $driver = NULL)
 	{
 		if(!$driver) $driver = Config::get('cache', 'default') ? Config::get('cache', 'default') : 'none';
 		
@@ -56,14 +56,14 @@ class ResultCache
 		return false;
 	}
 	
-	public static function delete($key)
+	public static function delete($key, $driver = NULL)
 	{
 		if(!($engine = CacheFactory::getInstance($driver))) return false;
 		
 		return $engine -> delete($key);
 	}
 	
-	public static function flush()
+	public static function flush($driver = NULL)
 	{
 		if(!($engine = CacheFactory::getInstance($driver))) return false;
 		

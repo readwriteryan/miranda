@@ -6,7 +6,6 @@ use miranda\config\Config;
 Class Request
 {
     protected static $instance = NULL;
-    
     protected $path;
     protected $method;
     protected static $mapping = array(
@@ -107,10 +106,30 @@ Class Route
 	self::$routes[Request::mapping('get')]['/']	= $action;
     }
     
+    public static function resource($model)
+    {
+	$controller = $model;
+	
+	self::get("/$model/:id", "$controller#get", ['id' => 'int']);
+	self::get("/$model/:id/edit", "$controller#edit", ['id' => 'int']);
+	self::get("/$model/new", "$controller#make");
+	self::post("/$model", "$controller#create");
+	self::put("/$model/:id", "$controller#update", ['id' => 'int']);
+	self::delete("/$model/:id", "$controller#delete", ['id' => 'int']);
+    }
+    
+    public static function resources($model)
+    {
+	$controller = $model;
+	
+	self::resource($model);
+	self::get("/$model", "$controller#page");
+    }
+    
     public static function start()
     {
 	$request	= Request::getInstance();
-	$params		= array();
+	$params		= [];
 	
 		
 	if($request -> path != false)
@@ -119,17 +138,10 @@ Class Route
 	    if(isset(self::$routes[$request -> method]))
 	    {
 		$cache = CacheFactory::getInstance();
-				
 		/** Load route actions from cache if possible */
 		if($result = $cache -> get('routes_' . md5($request -> path)))
 		{
-		    $action 				= $result[0];
-		    $params				= array_slice($result, 1);
-		    list($controller, $function)	= explode('#', $action);
-		    $controller 			= Config::get('namespace', 'controllers') . $controller;
-		    $controller				= $controller::getInstance($params);
-		    	
-		    $controller -> $function();
+		    self::action($result[0], array_slice($result, 1), $request);
 		    exit;
 		}
 		else
@@ -138,38 +150,43 @@ Class Route
 		    {   
 			if(preg_match('`^' . $route . '$`', $request -> path, $params))
 			{
-			    $params 				= array_slice($params, 1);
-			    list($controller, $function)	= explode('#', $action);
-			    $controller				= Config::get('namespace', 'controllers') . $controller;
-			    $controller 			= $controller::getInstance($params);
-			    
-			    /** Cache the route, action and params for faster processing */
-			    array_unshift($params, $action);
-			    $cache -> set('routes_' . md5($request -> path), $params, 0);
-								
-			    $controller -> $function();
+			    self::action($action, array_slice($params, 1), $request, true);
 			    exit;
 			}
 		    }
 		}
 	    }
-			
+	    
 	    /** Trigger default route */
-	    list($controller, $function)	= explode('#', self::$default_route);
-	    $controller				= Config::get('namespace', 'controllers') . $controller;
-	    $controller 			= $controller::getInstance($params);
-	
-	    $controller -> $function();
+	    self::action(self::$default_route, $params, $request);
 	}
 	else
 	{
 	    /** Trigger root route */
-	    list($controller, $function)	= explode('#', self::$root);
-	    $controller				= Config::get('namespace', 'controllers') . $controller;
-	    $controller 			= $controller::getInstance($params);
-			
-	    $controller -> $function();
+	    self::action(self::$root, $params, $request);
 	}
+    }
+    
+    protected static function action($action, $params, $request, $cache = false)
+    {
+	list($controller, $function)	= explode('#', $action);
+	$controller 			= Config::get('namespace', 'controllers') . ucfirst($controller);
+	$controller			= $controller::getInstance();
+	
+	$controller -> controller_setup($params);
+    
+	if($cache)
+	{
+	    /** Cache the route, action and params for faster processing */
+	    $cache = CacheFactory::getInstance();
+	    
+	    array_unshift($params, $action);
+	    $cache -> set('routes_' . md5($request -> path), $params, 0);
+	}
+	
+	$controller -> execute_before($function);	    	
+	$controller -> $function();
+	$controller -> execute_after($function);
     }
     
     protected static function processRoute($route, $restrict)

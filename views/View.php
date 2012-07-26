@@ -6,9 +6,9 @@ use miranda\config\Config;
 class View
 {
 
-    protected $visible	= array();
-    public $css		= array();
-    public $js		= array();
+    protected $visible	= [];
+    public $css		= [];
+    public $js		= [];
     
     private static function escape($value)
     {
@@ -22,14 +22,14 @@ class View
     
     public function css($stylesheet)
     {
-	$this -> css[] = format('css/' . self::escape($stylesheet) . '.css');
+	$this -> css[] = format(Config::get('locations', 'css') . self::escape($stylesheet) . '.css');
 	
 	return $this;
     }
     
     public function js($source)
     {
-	$this -> js[] = format('js/' . self::escape($source) . '.js');
+	$this -> js[] = format(Config::get('locations', 'js') . self::escape($source) . '.js');
 	
 	return $this;
     }
@@ -79,16 +79,16 @@ class View
     {
 	extract($this -> visible);
 		
-	if($template = Config::get('views', 'template')) require_once(Config::get('site', 'webroot') . '/views/global/' . $template);
+	if($template = Config::get('views', 'template')) require_once(Config::get('site', 'webroot') . Config::get('locations', 'global') . $template);
 		
-	require_once(Config::get('site', 'webroot') . '/views/' . $view . '.html.php');
+	require_once(Config::get('site', 'webroot') . Config::get('locations', 'views') . $view . '.html.php');
 		
-	if($footer = Config::get('views', 'footer')) require_once(Config::get('site', 'webroot') . '/views/global/' . $footer); 
+	if($footer = Config::get('views', 'footer')) require_once(Config::get('site', 'webroot') . Config::get('locations', 'global') . $footer); 
     }
     
     public function render_partial($partial, $visible = NULL)
     {
 	if(is_array($visible)) extract($visible);
-	require(Config::get('site', 'webroot') . 'views/partials/' . $partial .'.html.php');
+	require(Config::get('site', 'webroot') . Config::get('locations', 'partials') . $partial .'.html.php');
     }
 }
