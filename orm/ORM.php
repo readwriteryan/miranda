@@ -11,14 +11,15 @@ class ORM
 {
     protected static $table_name	= NULL;
     protected static $primary_key	= NULL;
-    protected static $column_map	= array();
+    protected static $column_map	= [];
     protected static $accessible	= true;
     protected $persisted		= false;
-    protected $values			= array();
+    protected $values			= [];
     protected $updated			= false;
     protected $cacheable		= false;
     protected $cache_expire		= 0;
     protected $foreign_key		= NULL;
+    protected $functions		= [];
     
     protected function __construct() {} /** Should not be instantiated directly */
     
@@ -55,10 +56,15 @@ class ORM
     /** Overloads the calling of object finding methods in an object context */
     public function __call($method, $arguments)
     {
-	$method = "static::$method";
-	array_unshift($arguments, $this);
+	$valid = ['find', 'findOne', 'findBy', 'where'];	
 	
-	if(is_callable($method))
+	if(in_array($method, $valid))
+	{
+	    array_unshift($arguments, $this);
+	    
+	    return call_user_func_array("static::$method", $arguments);
+	}
+	else if(array_key_exists($method, $this -> functions))
 	    return call_user_func_array($method, $arguments);
 	else
 	    return false;
@@ -67,11 +73,12 @@ class ORM
     /** Overloads the calling of object finding methods in a static context */
     public static function __callStatic($method, $arguments)
     {
-	$method = "static::$method";
+	$valid = ['find', 'findOne', 'findBy', 'where'];
+	
 	array_unshift($arguments, NULL);
 	
-	if(is_callable($method))
-	    return call_user_func_array($method, $arguments);
+	if(in_array($method, $valid))
+	    return call_user_func_array("static::$method", $arguments);
 	else
 	    return false;
     }
@@ -518,6 +525,17 @@ class ORM
     public static function paginate($page, $per_page = 10)
     {
 	return new Pagination(get_called_class(), $page, $per_page);
+    }
+    
+    public function registerFunction($name, $closure)
+    {
+	if(is_callable($closure))
+	{
+	    $this -> functions[$name] = $closure;
+	    return true;
+	}
+	
+	return false;
     }
 }
 ?>
