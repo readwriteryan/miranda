@@ -110,9 +110,9 @@ Class Route
     {
 	$controller = $model;
 	
-	self::get("/$model/:id", "$controller#get", ['id' => 'int']);
+	self::get("/$model/:id", "$controller#show", ['id' => 'int']);
 	self::get("/$model/:id/edit", "$controller#edit", ['id' => 'int']);
-	self::get("/$model/new", "$controller#make");
+	self::get("/$model/new", "$controller#add");
 	self::post("/$model", "$controller#create");
 	self::put("/$model/:id", "$controller#update", ['id' => 'int']);
 	self::delete("/$model/:id", "$controller#delete", ['id' => 'int']);
@@ -123,7 +123,7 @@ Class Route
 	$controller = $model;
 	
 	self::resource($model);
-	self::get("/$model", "$controller#page");
+	self::get("/$model", "$controller#index");
     }
     
     public static function start()
