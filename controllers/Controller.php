@@ -3,13 +3,14 @@ namespace miranda\controllers;
 
 use miranda\views\View;
 use miranda\config\Config;
-use miranda\plugins\SecureHash;
+use miranda\plugins\Session;
 
 class Controller
 {
-    private static $instances	= array();
-    protected $params		= array();
+    private static $instances	= [];
+    protected $params		= [];
     protected $view		= NULL;
+    protected $session		= NULL;
     protected $before		= [];
     protected $after		= [];
     
@@ -27,6 +28,15 @@ class Controller
     {
 	$this -> params = $params;
 	$this -> view	= new View;
+	
+	if(Config::get('sessions', 'enabled'))
+	{
+	    if(!isset($_COOKIE['miranda_sessionid']) || !($this -> session = Session::findOne($_COOKIE['miranda_sessionid'])) || !$this -> session -> validate())
+	    {
+		$this -> session = new Session;
+		$this -> session -> getId(true);
+	    }
+	}
     }
     
     public function action($filters, $actions = NULL, $when = 'before')

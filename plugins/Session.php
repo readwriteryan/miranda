@@ -108,12 +108,4 @@ class Session extends ORM
 	return $this -> session_last_active;
     }
 }
-
-namespace miranda;
-use miranda\plugins\Session;
-if(!isset($_COOKIE['miranda_sessionid']) || !($session = Session::findOne($_COOKIE['miranda_sessionid'])) || !$session -> validate())
-{
-    $session = new Session;
-    $session -> getId(true);
-}
 ?>
