@@ -26,6 +26,8 @@ Class PDOStmt extends PDOStatement
 	{
 	    SystemLogger::log_event(5, 'Prepared statement containing: ' . $this -> queryString . ' took ' . $total_time . ' seconds to execute.');
 	}
+	
+	return $result;
     }
 }
 

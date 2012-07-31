@@ -2,21 +2,31 @@
 namespace miranda\views;
 
 use miranda\config\Config;
+use miranda\plugins\SecureHash;
+use miranda\plugins\ORM;
 
 class View
 {
     protected $visible	= [];
     public $css		= [];
     public $js		= [];
+    public $session	= NULL;
     
-    private static function escape($value)
+    private static function escape($data)
     {
-	if(is_string($value))
-	    return htmlentities($value, ENT_QUOTES, Config::get('site', 'charset'));
-	else if(is_array($value))
-	    return array_map('self::escape', $value);
+	if(is_string($data))
+	    return htmlentities($data, ENT_QUOTES, Config::get('site', 'charset'));
+	else if(is_object($data) && is_callable([$data, 'escape']))
+	    return $data -> escape();
+	else if(is_object($data))
+	{
+	    foreach(get_object_vars($data) as $key => $value) $data -> $key = htmlentities($data -> $key, ENT_QUOTES, Config::get('site', 'charset'));
+	    return $data;
+	}
+	else if(is_array($data))
+	    return array_map('self::escape', $data);
 	else
-	    return $value;
+	    return $data;
     }
     
     public function css($stylesheet)
@@ -88,6 +98,19 @@ class View
     public function render_partial($partial, $visible = NULL)
     {
 	if(is_array($visible)) extract($visible);
+	
 	require(Config::get('site', 'webroot') . Config::get('locations', 'partials') . $partial .'.html.php');
+    }
+    
+    public function form_token()
+    {
+	$token = SecureHash::hash('sha256', uniqid(mt_rand(10000, 99999), true), Config::get('namespace', 'base'), false);
+	
+	if(isset($this -> session))
+	    $this -> session -> miranda_form_token = $token;
+	else
+	    setcookie('miranda_form_token', $token, 0, Config::get('cookies', 'path'), Config::get('cookies', 'domain'), false, true);
+	    
+	return $token;
     }
 }

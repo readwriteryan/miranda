@@ -4,15 +4,17 @@ namespace miranda\controllers;
 use miranda\views\View;
 use miranda\config\Config;
 use miranda\plugins\Session;
+use miranda\plugins\SecureHash;
+use miranda\exceptions\GeneralException;
 
 class Controller
 {
     private static $instances	= [];
     protected $params		= [];
-    protected $view		= NULL;
-    protected $session		= NULL;
     protected $before		= [];
     protected $after		= [];
+    protected $view		= NULL;
+    protected $session		= NULL;
     
     public static function getInstance()
     {
@@ -36,6 +38,8 @@ class Controller
 		$this -> session = new Session;
 		$this -> session -> getId(true);
 	    }
+	    
+	    $this -> view -> session = &$this -> session;
 	}
     }
     
@@ -139,6 +143,16 @@ class Controller
     {
 	header('Location: ' . Config::get('site', 'base') . $location, true, 301);
 	exit;
+    }
+    
+    public function validate_form_token()
+    {
+	if(!isset($_POST['miranda_form_token']) || trim($_POST['miranda_form_token']) == '') throw new GeneralException('Form token not supplied but required.');
+	
+	if(($this -> session && $this -> session -> miranda_form_token === $_POST['miranda_form_token']) || (isset($_COOKIE['miranda_form_token']) && $_COOKIE['miranda_form_token'] === $_POST['miranda_form_token']))
+	    return true;
+	    
+	throw new GeneralException('Valid form token did not match supplied form token.');
     }
 }
 ?>

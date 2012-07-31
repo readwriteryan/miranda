@@ -5,6 +5,7 @@ use miranda\database\PDOEngine;
 use miranda\cache\CacheFactory;
 use miranda\exceptions\GeneralException;
 use miranda\plugins\Pagination;
+use miranda\config\Config;
 use PDO;
 
 class ORM
@@ -145,9 +146,19 @@ class ORM
 	return $new;
     }
     
+    public function escape()
+    {
+	foreach($this -> values as $key => $value)
+	    if(is_string($value)) $this -> values[$key] = htmlentities($value, ENT_QUOTES, Config::get('site', 'charset'));
+	    
+	return $this;
+    }
+    
     protected function update($force = false)
     {
-	$db	= PDOEngine::getInstance();
+	$db = PDOEngine::getInstance();
+	if(!$db) return false;
+	
 	$query	= 'UPDATE `' . static::$table_name .'` SET ';
 	$values	= array();
 		
@@ -177,18 +188,22 @@ class ORM
 	$query = substr($query, 0, -2);
 	$query .= ' WHERE `' . static::$primary_key . "` = '{$this -> values[static::$column_map[static::$primary_key]]}'";
 	
-	$stmt = $db -> prepare($query);
-	$stmt -> execute($values);
+	$stmt	= $db -> prepare($query);
+	$result	= $stmt -> execute($values);
 	$stmt -> closeCursor();
 		
 	$this -> updated = false;
+	
+	return $result;
     }
 		
     protected function insert()
     {
 	if(!isset($this -> values[self::$primary_key])) $this -> values[self::$primary_key] = 0;
 		
-	$db	= PDOEngine::getInstance();
+	$db = PDOEngine::getInstance();
+	if(!$db) return false;
+	
 	$query	= 'INSERT INTO `' . static::$table_name .'` ( ' . implode(array_keys(static::$column_map), ',') . ') VALUES (';
 	$values	= array();
 		
@@ -200,10 +215,14 @@ class ORM
 	
 	$query	= substr($query, 0, -2) . ')';
 	$stmt	= $db -> prepare($query);
-	$stmt -> execute($values);
+	
+	$result = $stmt -> execute($values);
+	
 	$this -> values[static::$primary_key] = $db -> lastInsertId();
 	$stmt -> closeCursor();
 	$this -> persisted = true;
+	
+	return $result;
     }
     
     protected static function findOne($refobject = NULL, $pkey = 0)
@@ -310,7 +329,6 @@ class ORM
 		
 	$stmt = $db -> prepare($query);
 
-	
 	if($use_foreign_key)
 	    $stmt -> bindParam(':fkey', $foreign_key_value);
 		
@@ -490,11 +508,11 @@ class ORM
 			
 	if($this -> persisted)
 	{
-	    $this -> update($force);
+	    if(!$this -> update($force)) return false;
 	}
 	else
 	{
-	    $this -> insert();
+	    if(!$this -> insert()) return false;
 	}
 		
 	$this -> cache();
