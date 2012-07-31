@@ -8,7 +8,7 @@ class Config
 	private static function load()
 	{
 		self::$config = parse_ini_file(__DIR__ . '/config.ini', true); /** Load general miranda configuration */
-		self::$config = array_merge(self::$config, parse_ini_file('/srv/http/ryanthegreat/application/config/config.ini', true)); /** Load application configuration and merge */
+		self::$config = array_merge(self::$config, parse_ini_file('/path/to/application/config.ini', true)); /** Load application configuration and merge */
 	}
 	
 	public static function get($grouping, $key)
